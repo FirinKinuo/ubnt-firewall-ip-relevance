@@ -1,3 +1,5 @@
+import ipaddress
+
 from peewee import SqliteDatabase, OperationalError
 from app.utils.fpylog import Log
 from .exceptions import *
@@ -114,38 +116,52 @@ class Database:
         except peewee.IntegrityError:
             raise IntegrityError("Данный хост уже существует в базе данных")
 
+    @staticmethod
+    def check_ip_unique(hostname_id: int, ip_check: str) -> bool:
+        """
+        Проверяет на уникальность IP в записях к данном хосту
+        Args:
+            hostname_id (int): Id хоста, в котором необходимо проверсти проверку
+            ip_check (str): Ip адрес для проверки
+
+        Returns:
+            bool: True - если IP уникальный, False - если уже записан в базе данных к данному хосту
+        """
+        return True if IpAddress.get_or_none(IpAddress.hostname_id == hostname_id,
+                                             IpAddress.ip_address == ip_check) is None else False
+
     @classmethod
     def add_host_ip(cls, hostname: str, ip_address: str) -> IpAddress:
         """
         Добавляет IP со связью к хосту
         Args:
-            hostname (str):
-            ip_address (str):
+            hostname (str): Название хоста, к которому необходимо добавитиь IP
+            ip_address (str): IP-адрес для добавления
 
         Returns:
-            list: Список добавленных IpAddress
-        Raises:
+            IpAddress: Добавленный IpAddress
         """
 
-        # Так как get_or_create возвращает Tuple, обращаюсь к ID по индексу
-        hostname_id = Host.get_or_create(hostname=hostname)[0]
-        ip_address_model = IpAddress.create(hostname_id=hostname_id, ip_address=ip_address)
-
-        return ip_address_model
+        # Так как get_or_create возвращает Tuple, обращаюсь к модели по 0 индексу
+        hostname = Host.get_or_create(hostname=hostname)[0]
+        if cls.check_ip_unique(hostname_id=hostname.id, ip_check=ip_address):
+            ip_address_model = IpAddress.create(hostname_id=hostname.id, ip_address=ip_address)
+            return ip_address_model
 
     @classmethod
     def add_host_ip_list(cls, hostname: str, ip_list: list) -> list:
         """
         Добавляет список IP со связью к хосту
         Args:
-            hostname (str):
-            ip_list (list):
+            hostname (str): Название хоста, к которому необходимо добавитиь IP
+            ip_list (list): Список IP-адресов для добавления
 
         Returns:
             list: Список добавленных IpAddress
-        Raises:
         """
 
-        ip_address_models = [cls.add_host_ip(hostname=hostname, ip_address=ip_address) for ip_address in ip_list]
+        # Добавляет
+        ip_address_models = [ip for ip in [
+            cls.add_host_ip(hostname=hostname, ip_address=ip_address) for ip_address in ip_list] if ip is not None]
 
         return ip_address_models
