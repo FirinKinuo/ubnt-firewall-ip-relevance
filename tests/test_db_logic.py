@@ -1,7 +1,7 @@
-from dotenv import get_key as env_get_key
 import pytest
 import asyncio
 import random
+from dotenv import get_key as env_get_key
 from app.database import Database
 from app.setting import DOT_ENV_PATH
 from app.database.models import *
@@ -11,7 +11,7 @@ HOST_NAME_TEST = 'google.com'
 
 
 def generate_random_host():
-    return ''.join([random.choice('qwertyuiopasdfghlzxcvbnm') for _ in range(5)]) + '.com'
+    return ''.join([random.choice('qwertyuiopasdfghl') for _ in range(5)]) + '.com'
 
 
 @pytest.fixture(scope='session')
