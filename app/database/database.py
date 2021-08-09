@@ -1,5 +1,3 @@
-import ipaddress
-
 from peewee import SqliteDatabase, OperationalError
 from app.utils.fpylog import Log
 from .exceptions import *
@@ -165,3 +163,13 @@ class Database:
             cls.add_host_ip(hostname=hostname, ip_address=ip_address) for ip_address in ip_list] if ip is not None]
 
         return ip_address_models
+
+    @classmethod
+    def get_host_list(cls) -> list:
+        """
+        Получить список названий хостов из базы данных
+        Returns:
+            list: Список названий хостов
+        """
+        return [host.hostname for host in Host.select()]
+

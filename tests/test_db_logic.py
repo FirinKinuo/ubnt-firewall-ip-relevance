@@ -11,7 +11,7 @@ HOST_NAME_TEST = 'google.com'
 
 
 def generate_random_host():
-    return ''.join([random.choice('qwertyuiopasdfghl') if i != 5 else random.choice('ABC') for i in range(5)]) + '.com'
+    return ''.join([random.choice('qwertyuiopasdfghlzxcvbnm') for _ in range(5)]) + '.com'
 
 
 @pytest.fixture(scope='session')
@@ -63,3 +63,6 @@ def test_ip_unique(init_db):
     if repeat_added_ip_list:
         raise AssertionError("IP адрес не должен быть добавлен")
 
+
+def test_get_hostname_list(init_db):
+    assert isinstance(init_db.get_host_list(), list)
