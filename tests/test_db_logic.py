@@ -123,3 +123,11 @@ def test_delete_hostname(init_db):
 
     assert host_payload not in init_db.get_host_list()
     assert ip_payload != init_db.get_host_ip_list(hostname_id=hostname_id)
+
+
+def test_get_hostname_with_ip(init_db):
+    hostname_payload = 'get_host_with_ip.test'
+    init_db.add_new_host(hostname=hostname_payload)
+
+    host_list = init_db.get_all_host_with_ip()
+    assert isinstance(host_list, dict)

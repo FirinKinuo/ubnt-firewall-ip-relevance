@@ -177,7 +177,7 @@ class Database:
         Returns:
             list: Список названий хостов
         """
-        return [host.hostname for host in Host.select()]
+        return [host for host in Host.select()]
 
     @classmethod
     def get_host_id(cls, hostname: str) -> int:
@@ -242,3 +242,14 @@ class Database:
             Host.get(Host.id == hostname_id).delete_instance()
         except DoesNotExist:
             raise DoesNotExist(f"Хоста про данному ID - {hostname_id} не существует")
+
+    @classmethod
+    def get_all_host_with_ip(cls) -> dict:
+        """
+        Получить словарь хостов со всеми связанными IP
+        Returns:
+
+        """
+        dict_host = {host.hostname: cls.get_host_ip_list(host.id) for host in cls.get_host_list()}
+
+        return dict_host
