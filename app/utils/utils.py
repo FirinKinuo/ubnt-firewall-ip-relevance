@@ -1,7 +1,4 @@
-from pathlib import Path
-from sys import path as sys_path
 from dotenv import load_dotenv
-from numba import njit
 from asyncio import sleep as async_sleep
 from app.setting import DOT_ENV_PATH
 from app.lookup import find_all_ip_hostname
