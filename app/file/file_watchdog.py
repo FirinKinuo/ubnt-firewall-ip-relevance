@@ -18,7 +18,6 @@ class HostFileWatchdog:
             patterns=[self.file_path.parts[-1]],
             ignore_directories=True,
             case_sensitive=False)
-        print('/'.join(self.file_path.parts[:-1]).replace("\\", ''))
         self.observer.schedule(hostname_handler, path='/'.join(self.file_path.parts[:-1]).replace("\\", ''))
 
     class HostFileHandler(PatternMatchingEventHandler):
