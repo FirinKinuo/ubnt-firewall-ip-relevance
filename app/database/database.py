@@ -1,4 +1,4 @@
-from peewee import SqliteDatabase, OperationalError
+from peewee import SqliteDatabase
 from app.utils.fpylog import Log
 from .exceptions import *
 from .models import *
@@ -10,12 +10,13 @@ class Database:
     """Класс для работы с БД SQLite"""
 
     def __init__(self, database: str):
-        self.db = SqliteDatabase(database=database)
+        self.db = SqliteDatabase(database=database, pragmas={'foreign_keys': 1})
         self.models = [Host, IpAddress]
 
     def start(self) -> bool:
         """
         Создает подключение к БД, если не удается, то выводит ошибку о невозможности подключения
+
         Returns:
             bool: Состояние подключения к БД
         """
@@ -30,6 +31,7 @@ class Database:
     def drop_all(self) -> None:
         """
         Удаляет все таблицы в базе данных
+
         Returns:
             None:
         """
@@ -39,6 +41,7 @@ class Database:
     def drop_current(cls, model: BaseModel) -> None:
         """
         Удаляет определенную модель базы данных
+
         Args:
             model (BaseModel): Модель, которую необходимо удалить из БД
 
@@ -52,8 +55,10 @@ class Database:
     def _check_missing_tables(cls, tables: list) -> list:
         """
         Проверяет недостающие таблицы, если такие есть, возвращает список недостающих моделей
+
         Args:
             tables(list): список моделей, которые необходимо проверить
+
         Returns:
             list: Вернет список недостающих моделей
         """
@@ -63,6 +68,7 @@ class Database:
     def _init_tables(self) -> None:
         """
         Инизиализирует таблицы БД
+
         Returns:
             None:
         """
@@ -85,6 +91,7 @@ class Database:
     async def init(self) -> bool:
         """
         Инициализирует базу данных
+
         Returns:
             bool: True - БД прошла инициализацию, False - не прошла
         """
@@ -111,7 +118,7 @@ class Database:
             video_server_model = Host.create(hostname=hostname)
             return video_server_model
 
-        except peewee.IntegrityError:
+        except IntegrityError:
             raise IntegrityError("Данный хост уже существует в базе данных")
 
     @staticmethod
@@ -139,7 +146,6 @@ class Database:
         Returns:
             IpAddress: Добавленный IpAddress
         """
-
         # Так как get_or_create возвращает Tuple, обращаюсь к модели по 0 индексу
         hostname = Host.get_or_create(hostname=hostname)[0]
         if cls.check_ip_unique(hostname_id=hostname.id, ip_check=ip_address):
@@ -157,8 +163,7 @@ class Database:
         Returns:
             list: Список добавленных IpAddress
         """
-
-        # Добавляет
+        # Добавляет все ip из списка с привязкой к указанному хосту
         ip_address_models = [ip for ip in [
             cls.add_host_ip(hostname=hostname, ip_address=ip_address) for ip_address in ip_list] if ip is not None]
 
@@ -168,8 +173,72 @@ class Database:
     def get_host_list(cls) -> list:
         """
         Получить список названий хостов из базы данных
+
         Returns:
             list: Список названий хостов
         """
         return [host.hostname for host in Host.select()]
 
+    @classmethod
+    def get_host_id(cls, hostname: str) -> int:
+        """
+        Получить Id хоста в базе данных
+        Args:
+            hostname (str): Название хоста
+
+        Returns:
+            int: Id хоста
+
+        Raises:
+            DoesNotExist: Если был передан несуществующий ID
+        """
+        try:
+            return Host.get(Host.hostname == hostname).id
+        except DoesNotExist:
+            raise DoesNotExist("Данного хоста не существует")
+
+    @classmethod
+    def get_host_ip_list(cls, hostname_id: int) -> list:
+        """
+        Получить список ip, привязанных к хосту
+        Args:
+            hostname_id (int): Id хоста, у которого необходимо найти все IP
+
+        Returns:
+            list: Список IP адресов, связанных с указанным хостом
+        """
+        return [ip.ip_address for ip in IpAddress.select().where(IpAddress.hostname_id == hostname_id)]
+
+    @classmethod
+    def delete_ip_by_hostname(cls, hostname_id: int, ip_address: str) -> None:
+        """
+        Удалить из таблицы определенный ip по id хоста
+        Args:
+            hostname_id (int): id хоста
+            ip_address (str): IP Адрес, который необходимо удалить
+
+        Returns:
+            None:
+        """
+        try:
+            IpAddress.get(IpAddress.hostname_id == hostname_id, IpAddress.ip_address == ip_address).delete_instance()
+        except DoesNotExist:
+            raise DoesNotExist(f"IP {ip_address} - не записан в бд")
+
+    @classmethod
+    def delete_hostname(cls, hostname_id: int) -> None:
+        """
+        Удалить определенный хост и все его записи IP по id
+        Args:
+            hostname_id (int): Id хоста
+
+        Returns:
+            None:
+
+        Raises:
+            DoesNotExist: При попытке удалить хоста по несуществущему ID
+        """
+        try:
+            Host.get(Host.id == hostname_id).delete_instance()
+        except DoesNotExist:
+            raise DoesNotExist(f"Хоста про данному ID - {hostname_id} не существует")
