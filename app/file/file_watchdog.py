@@ -25,10 +25,19 @@ class HostFileWatchdog:
         """Класс слежения за изменениями в файле"""
 
         def on_modified(self, event):
-            self.update(event.src_path)
+            """Обрабатывает ивенты при изменениях в файле"""
+            self.update_ip_table(event.src_path)
 
         @classmethod
-        def update(cls, file_path: str):
+        def update_ip_table(cls, file_path: str) -> None:
+            """
+            Обновить данные в ip таблицах, если найдены изменения
+            Args:
+                file_path (str): Путь до файла с хостами
+
+            Returns:
+                None:
+            """
             db = Database(database=environ.get("SQLITE_PATH"))
             host_file = HostFile(host_file_path=file_path)
             new_hosts = host_file.find_new_host()
