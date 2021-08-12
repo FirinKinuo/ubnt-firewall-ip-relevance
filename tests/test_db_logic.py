@@ -1,9 +1,7 @@
 import pytest
 import asyncio
 import random
-from dotenv import get_key as env_get_key
 from app.database import Database
-from app.setting import DOT_ENV_PATH
 from app.database.models import *
 from app.database.exceptions import *
 
@@ -19,7 +17,7 @@ def loop():
 
 @pytest.fixture(scope='session')
 def init_db(loop):
-    db = Database(database=env_get_key(DOT_ENV_PATH, 'SQLITE_PATH'))
+    db = Database(database="test.sqlite")
     db.drop_all()
     loop.run_until_complete(db.init())
     return db
