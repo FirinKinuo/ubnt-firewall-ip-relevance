@@ -1,16 +1,15 @@
 import peewee
-from dotenv import get_key as env_get_key
-from app.setting import DOT_ENV_PATH
+from os import environ
 
 
 class BaseModel(peewee.Model):
-    """Базовый класс для моделей с бд MySQL"""
+    """Базовый класс для моделей с бд SQLite"""
     id = peewee.PrimaryKeyField(null=False)
 
     class Meta:
         # Ниже представлен небольшой костыль, ибо записывание переменных из config.env в переменные среды
         # происходит позже, чем инициализация пакетов и этих моделей. Следовательно, сюда передавались None..
-        database = peewee.SqliteDatabase(database=env_get_key(DOT_ENV_PATH, 'SQLITE_PATH'), pragmas={'foreign_keys': 1})
+        database = peewee.SqliteDatabase(database=environ.get('SQLITE_PATH'), pragmas={'foreign_keys': 1})
 
 
 class Host(BaseModel):

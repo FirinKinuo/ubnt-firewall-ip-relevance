@@ -1,5 +1,13 @@
-from pathlib import Path
-from sys import path as sys_path
+from os import environ
+from app.database import Database
+from app.ubnt import UbntService
 
-_env_path = Path(sys_path[0], 'config.env')
-DOT_ENV_PATH = _env_path if _env_path.exists() else exit()
+DATABASE = Database(database=environ.get("SQLITE_PATH"))
+UBNT = UbntService(
+    host=environ.get("UBNT_HOST"),
+    login=environ.get("UBNT_USER"),
+    password=environ.get("UBNT_PASSWORD"),
+    port=int(environ.get("UBNT_PORT")),
+    key=environ.get("UBNT_PRIVATE_KEY"),
+    firewall_group=environ.get("UBNT_FIREWALL_GROUP")
+)
