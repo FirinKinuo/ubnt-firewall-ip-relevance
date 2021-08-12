@@ -1,7 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from app.setting import DOT_ENV_PATH
-from dotenv import get_key as env_get_key
+from os import environ
 
 
 def _prepare_log(log_type: str, message: []) -> str:
@@ -34,7 +33,7 @@ class Log:
     def __init__(self, file_log=False, file_log_name="log", file_log_path=""):
         self.file_log = file_log
         self.file_log_name = file_log_name
-        self.file_log_path = Path(env_get_key(DOT_ENV_PATH, 'LOG_PATH'), file_log_path)
+        self.file_log_path = Path(environ.get('LOG_PATH'), file_log_path)
 
     def _log_in_file(self, type_log: str, message: []) -> None:
         if self.file_log:

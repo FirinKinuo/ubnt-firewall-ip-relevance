@@ -1,9 +1,6 @@
 from peewee import SqliteDatabase
-from app.utils.fpylog import Log
 from .exceptions import *
 from .models import *
-
-log = Log(file_log=True, file_log_name='db')
 
 
 class Database:
@@ -22,10 +19,10 @@ class Database:
         """
         try:
             self.db.connect()
-            log.success(f"Подключение к бд успешно", log_file=False)
+            # log.success(f"Подключение к бд успешно", log_file=False)
             return True
         except OperationalError as dbErr:
-            log.error(dbErr)
+            # log.error(dbErr)
             return False
 
     def drop_all(self) -> None:
@@ -75,18 +72,20 @@ class Database:
         missing_tables = self._check_missing_tables(self.models)
 
         if missing_tables:
-            log.warn(f"Создание недостающих таблиц:")
+            # log.warn(f"Создание недостающих таблиц:")
             for table in missing_tables:
                 print(table.__name__)
 
             try:
                 self.db.create_tables(missing_tables)
-                log.success("Таблицы успешно созданы")
+                # log.success("Таблицы успешно созданы")
             except OperationalError as dbErr:
-                log.error(dbErr)
+                print(dbErr)
+                # log.error(dbErr)
 
         else:
-            log.success("Таблицы БД в порядке", log_file=False)
+            print("Таблицы БД в порядке")
+            # log.success("Таблицы БД в порядке", log_file=False)
 
     async def init(self) -> bool:
         """
