@@ -108,55 +108,53 @@ class Database:
             hostname (str): Название хоста
 
         Returns:
-            Host: Вернет модель Host, если создана новая строка в таблице
+            app.database.models.Host: Вернет модель Host, если создана новая строка в таблице
 
         Raises:
             IntegrityError: Возникнет ошибка, если добавляемый хост уже существует в базе данных
         """
         try:
-            video_server_model = Host.create(hostname=hostname)
-            return video_server_model
+            host_model = Host.create(hostname=hostname)
+            return host_model
 
         except IntegrityError:
             raise IntegrityError("Данный хост уже существует в базе данных")
 
     @staticmethod
-    def check_ip_unique(hostname_id: int, ip_check: str) -> bool:
+    def check_ip_unique(hostname: Host, ip_check: str) -> bool:
         """
         Проверяет на уникальность IP в записях к данном хосту
         Args:
-            hostname_id (int): Id хоста, в котором необходимо проверсти проверку
+            hostname (app.database.models.Host): Модель хоста, для которого необходимо проверсти проверку
             ip_check (str): Ip адрес для проверки
 
         Returns:
             bool: True - если IP уникальный, False - если уже записан в базе данных к данному хосту
         """
-        return True if IpAddress.get_or_none(IpAddress.hostname_id == hostname_id,
+        return True if IpAddress.get_or_none(IpAddress.hostname_id == hostname.id,
                                              IpAddress.ip_address == ip_check) is None else False
 
     @classmethod
-    def add_host_ip(cls, hostname: str, ip_address: str) -> IpAddress:
+    def add_host_ip(cls, hostname: Host, ip_address: str) -> IpAddress:
         """
         Добавляет IP со связью к хосту
         Args:
-            hostname (str): Название хоста, к которому необходимо добавитиь IP
+            hostname (app.database.models.Host): Модель хоста, к которому необходимо добавитиь IP
             ip_address (str): IP-адрес для добавления
 
         Returns:
-            IpAddress: Добавленный IpAddress
+            app.database.models.IpAddress: Добавленный IpAddress
         """
-        # Так как get_or_create возвращает Tuple, обращаюсь к модели по 0 индексу
-        hostname = Host.get_or_create(hostname=hostname)[0]
-        if cls.check_ip_unique(hostname_id=hostname.id, ip_check=ip_address):
+        if cls.check_ip_unique(hostname=hostname, ip_check=ip_address):
             ip_address_model = IpAddress.create(hostname_id=hostname.id, ip_address=ip_address)
             return ip_address_model
 
     @classmethod
-    def add_host_ip_list(cls, hostname: str, ip_list: list) -> list:
+    def add_host_ip_list(cls, hostname: Host, ip_list: list) -> list:
         """
         Добавляет список IP со связью к хосту
         Args:
-            hostname (str): Название хоста, к которому необходимо добавитиь IP
+            hostname (app.database.models.Host): Модель хоста, к которому необходимо добавитиь IP
             ip_list (list): Список IP-адресов для добавления
 
         Returns:
@@ -179,57 +177,68 @@ class Database:
         return [host for host in Host.select()]
 
     @classmethod
-    def get_host_id(cls, hostname: str) -> int:
+    def get_or_create_host_by_name(cls, hostname: str) -> Host:
         """
-        Получить Id хоста в базе данных
+        Получить модель хоста в базе данных, если не существует - создать новую и вернуть её модель
         Args:
             hostname (str): Название хоста
-
         Returns:
-            int: Id хоста
-
-        Raises:
-            DoesNotExist: Если был передан несуществующий ID
+            app.database.models.Host: Модель хоста
         """
-        try:
-            return Host.get(Host.hostname == hostname).id
-        except DoesNotExist:
-            raise DoesNotExist("Данного хоста не существует")
+        return Host.get_or_create(hostname=hostname)[0]
 
     @classmethod
-    def get_host_ip_list(cls, hostname_id: int) -> list:
+    def get_host_ip_list(cls, hostname: Host) -> list:
         """
         Получить список ip, привязанных к хосту
         Args:
-            hostname_id (int): Id хоста, у которого необходимо найти все IP
+            hostname (app.database.models.Host): Модель хоста, у которого необходимо найти все IP
 
         Returns:
             list: Список IP адресов, связанных с указанным хостом
         """
-        return [ip.ip_address for ip in IpAddress.select().where(IpAddress.hostname_id == hostname_id)]
+        return [ip.ip_address for ip in IpAddress.select().where(IpAddress.hostname_id == hostname.id)]
 
     @classmethod
-    def delete_ip_by_hostname(cls, hostname_id: int, ip_address: str) -> None:
+    def delete_ip_by_hostname(cls, hostname: Host, ip_address: str) -> None:
         """
         Удалить из таблицы определенный ip по id хоста
         Args:
-            hostname_id (int): id хоста
+            hostname (app.database.models.Host): Модель хоста, из которого необходимо убрать IP
             ip_address (str): IP Адрес, который необходимо удалить
 
         Returns:
             None:
+
+        Raises:
+            DoesNotExist: При попытке удалить по несуществующему ID
         """
         try:
-            IpAddress.get(IpAddress.hostname_id == hostname_id, IpAddress.ip_address == ip_address).delete_instance()
+            IpAddress.get(IpAddress.hostname_id == hostname.id, IpAddress.ip_address == ip_address).delete_instance()
         except DoesNotExist:
             raise DoesNotExist(f"IP {ip_address} - не записан в бд")
 
     @classmethod
-    def delete_hostname(cls, hostname_id: int) -> None:
+    def delete_host_ip_list(cls, hostname: Host, ip_list: list) -> None:
+        """
+        Удаляет список IP по id хоста
+        Args:
+            hostname (app.database.models.Host): Модель хоста, из которого необходимо убрать IP
+            ip_list (list): Список IP-адресов для удаления
+
+        Returns:
+            None:
+        """
+        # Добавляет все ip из списка с привязкой к указанному хосту
+        for ip_address in ip_list:
+            cls.delete_ip_by_hostname(hostname=hostname, ip_address=ip_address)
+
+    @classmethod
+    def delete_hostname(cls, hostname: Host) -> None:
         """
         Удалить определенный хост и все его записи IP по id
         Args:
-            hostname_id (int): Id хоста
+            hostname (app.database.models.Host): Модель хоста, который необходимо удалить
 
         Returns:
             None:
@@ -238,9 +247,9 @@ class Database:
             DoesNotExist: При попытке удалить хоста по несуществущему ID
         """
         try:
-            Host.get(Host.id == hostname_id).delete_instance()
+            hostname.delete_instance()
         except DoesNotExist:
-            raise DoesNotExist(f"Хоста про данному ID - {hostname_id} не существует")
+            raise DoesNotExist(f"Хоста не существует")
 
     @classmethod
     def get_all_host_with_ip(cls) -> dict:
@@ -249,6 +258,6 @@ class Database:
         Returns:
 
         """
-        dict_host = {host.hostname: cls.get_host_ip_list(host.id) for host in cls.get_host_list()}
+        dict_host = {host.hostname: cls.get_host_ip_list(host) for host in cls.get_host_list()}
 
         return dict_host
