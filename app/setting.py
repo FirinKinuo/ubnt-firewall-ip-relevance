@@ -2,7 +2,9 @@ from os import environ
 from app.database import Database
 from app.ubnt import UbntService
 
+
 DATABASE = Database(database=environ.get("SQLITE_PATH"))
+DATABASE.init()
 UBNT = UbntService(
     host=environ.get("UBNT_HOST"),
     login=environ.get("UBNT_USER"),
