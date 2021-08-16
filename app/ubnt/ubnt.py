@@ -5,6 +5,10 @@ from pathlib import Path
 from re import match as re_match
 
 from app.ubnt.exceptions import *
+from app.logger import get_logger
+
+
+log = get_logger(__name__)
 
 
 class UbntService:
@@ -31,6 +35,7 @@ class UbntService:
         """Открыть соединение по SSH"""
         self.ssh.connect(hostname=self.host, port=self.port)
         self.ssh.login(Account(name=self.login, password=self.password, key=self.key))
+        log.info(f"Подключенно по ssh к {self.login}@{self.host}:{self.port}")
 
     def _ip_group_action(self, ip_address_list: list, group_name: str, action: str):
         """
@@ -68,8 +73,11 @@ class UbntService:
             self.ssh.execute("commit; save")
             self.ssh.execute("exit")
 
+            log.info(f"{'Добавлены' if action == 'set' else 'Удалены'} "
+                     f"IP: {', '.join(ip_address_list)} для группы {group_name}")
+
         except SSHTimeoutError as err:
-            print(err)
+            log.error(f"Ошибка SSH: {err}")
 
     def add_new_ip(self, ip_address_list: list) -> None:
         """

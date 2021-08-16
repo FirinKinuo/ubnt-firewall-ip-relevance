@@ -1,6 +1,10 @@
 from peewee import SqliteDatabase
 from .exceptions import *
 from .models import *
+from app.logger import get_logger
+
+
+log = get_logger(__name__)
 
 
 class Database:
@@ -19,10 +23,10 @@ class Database:
         """
         try:
             self.db.connect()
-            # log.success(f"Подключение к бд успешно", log_file=False)
+            log.info(f"Подключение к базе данных {self.db.database} успешно")
             return True
         except OperationalError as dbErr:
-            # log.error(dbErr)
+            log.error(dbErr)
             return False
 
     def drop_all(self) -> None:
@@ -72,22 +76,18 @@ class Database:
         missing_tables = self._check_missing_tables(self.models)
 
         if missing_tables:
-            # log.warn(f"Создание недостающих таблиц:")
-            for table in missing_tables:
-                print(table.__name__)
+            log.info(f"Создание недостающих таблиц: {', '.join([table.__name__ for table in missing_tables])}")
 
             try:
                 self.db.create_tables(missing_tables)
-                # log.success("Таблицы успешно созданы")
+                log.info("Таблицы успешно созданы")
             except OperationalError as dbErr:
-                print(dbErr)
-                # log.error(dbErr)
+                log.critical(dbErr)
 
         else:
-            print("Таблицы БД в порядке")
-            # log.success("Таблицы БД в порядке", log_file=False)
+            log.info("Таблицы базы данных в порядке")
 
-    async def init(self) -> bool:
+    def init(self) -> bool:
         """
         Инициализирует базу данных
 
@@ -147,6 +147,7 @@ class Database:
         """
         if cls.check_ip_unique(hostname=hostname, ip_check=ip_address):
             ip_address_model = IpAddress.create(hostname_id=hostname.id, ip_address=ip_address)
+            log.info(f"[{hostname.hostname}] Добавлен IP: {ip_address}")
             return ip_address_model
 
     @classmethod
@@ -215,6 +216,7 @@ class Database:
         """
         try:
             IpAddress.get(IpAddress.hostname_id == hostname.id, IpAddress.ip_address == ip_address).delete_instance()
+            log.info(f"[{hostname.hostname}] Удален IP: {ip_address}")
         except DoesNotExist:
             raise DoesNotExist(f"IP {ip_address} - не записан в бд")
 
@@ -248,6 +250,7 @@ class Database:
         """
         try:
             hostname.delete_instance()
+            log.info(f"Хост {hostname.hostname} удален со всеми связанными IP")
         except DoesNotExist:
             raise DoesNotExist(f"Хоста не существует")
 
