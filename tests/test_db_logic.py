@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 import random
 from app.database import Database
 from app.database.models import *
@@ -11,15 +10,10 @@ def generate_random_host():
 
 
 @pytest.fixture(scope='session')
-def loop():
-    return asyncio.get_event_loop()
-
-
-@pytest.fixture(scope='session')
-def init_db(loop):
+def init_db():
     db = Database(database="test.sqlite")
     db.drop_all()
-    loop.run_until_complete(db.init())
+    db.init()
     yield db
     db.drop_all()
 
