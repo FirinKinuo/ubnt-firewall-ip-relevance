@@ -99,4 +99,4 @@ async def background_checking_relevance(hours: int = 3) -> None:
                 UBNT.add_new_ip(ip_address_list=list(missing_ip))
 
         log.info("Проверка успешно выполнена")
-        await async_sleep(hours * 60)
+        await async_sleep(hours * 60 * 60)

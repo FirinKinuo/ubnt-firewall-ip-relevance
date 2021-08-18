@@ -9,5 +9,5 @@ if __name__.endswith("__main__"):
 
     async_loop = get_event_loop()
     async_loop.create_task(WATCHDOG.start())
-    async_loop.create_task(background_checking_relevance(hours=1))
+    async_loop.create_task(background_checking_relevance(hours=int(environ.get("AUTOCHECK_PERIOD", "1"))))
     async_loop.run_forever()
