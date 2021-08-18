@@ -1,12 +1,12 @@
 from Exscript.protocols import SSH2
+from Exscript.protocols.exception import InvalidCommandException
 from Exscript.key import PrivateKey
 from Exscript import Account
 from pathlib import Path
-from re import match as re_match
+import re
 
 from app.ubnt.exceptions import *
 from app.logger import get_logger
-
 
 log = get_logger(__name__)
 
@@ -37,6 +37,21 @@ class UbntService:
         self.ssh.login(Account(name=self.login, password=self.password, key=self.key))
         log.info(f"Подключенно по ssh к {self.login}@{self.host}:{self.port}")
 
+    def _configure_mode(self) -> None:
+        """
+        Переход в режим конфигурации ubnt
+        Returns:
+            None:
+        """
+        try:
+            self.ssh.execute("configure")
+        except InvalidCommandException as err:
+            # Если не находит команду configure, то скорее всего подключение уже в режиме configure
+            if 'configure: command not found' in err.args[0]:
+                self.ssh.execute("discard")
+            else:
+                raise InvalidCommandException(err)
+
     def _ip_group_action(self, ip_address_list: list, group_name: str, action: str):
         """
             Производит указанное действие в группе IP адресов
@@ -60,14 +75,10 @@ class UbntService:
             if not self.ssh.is_app_authorized():
                 self.__ssh_connect()
 
-            self.ssh.execute("configure")
+            self._configure_mode()
+
             for ip in ip_address_list:
-                if re_match(
-                        r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                        r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                        r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                        r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)',
-                        ip) is not None:
+                if re.match((r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.' * 4)[:-2], ip) is not None:
                     self.ssh.execute(f"{action} firewall group address-group {group_name} address {ip}")
 
             self.ssh.execute("commit; save")
@@ -98,3 +109,43 @@ class UbntService:
             None:
         """
         self._ip_group_action(ip_address_list=ip_address_list, group_name=self.firewall_group, action='delete')
+
+    def _force_close_configure_mode(self) -> None:
+        """
+        Гарантировано выйти из режима конфигурации
+        Returns:
+            None:
+        """
+        try:
+            self.ssh.execute("configure")
+        except InvalidCommandException:
+            pass
+        finally:
+            self.ssh.execute("exit discard")
+
+    def get_group_ip_list(self, group_name: str) -> list:
+        """
+        Получить список IP, записанных в группе
+        Args:
+            group_name (str): Название группы, из которой необходимо получить IP-адреса
+
+        Returns:
+            list: Список IP адресов
+        """
+        try:
+            if not self.ssh.is_app_authorized():
+                self.__ssh_connect()
+
+            self._force_close_configure_mode()
+            self.ssh.response = str()  # Очищаем последний response
+            self.ssh.execute(f"show firewall group {group_name} | no-more")
+            # Получаем ответ от ввода команды show, разделяем строки по разделителю \r\n, удаляем все пробелы
+            # Ищем строки, что подходят по регулярке, как IP-адрес
+            ip_list = [ip for ip in
+                       map(lambda res_string: re.sub(r"\s+", '', res_string), self.ssh.response.split("\r\n"))
+                       if re.match((r'(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.' * 4)[:-2], ip) is not None]
+            return ip_list
+
+        except SSHTimeoutError as err:
+            log.error(f"Ошибка SSH: {err}")
+

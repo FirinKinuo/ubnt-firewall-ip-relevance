@@ -264,3 +264,14 @@ class Database:
         dict_host = {host.hostname: cls.get_host_ip_list(host) for host in cls.get_host_list()}
 
         return dict_host
+
+    @classmethod
+    def get_all_ip_address(cls) -> list:
+        """
+        Получить все записи IP
+        Returns:
+            list: Список со списком IP-адресов
+        """
+        ip_list = [ip for ip in IpAddress.select()]
+
+        return ip_list

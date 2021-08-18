@@ -81,5 +81,22 @@ async def background_checking_relevance(hours: int = 3) -> None:
             if deleted_ip:
                 log.info(f"Для хоста {host} обнаружено удаление IP: {', '.join(new_ip)}")
                 delete_ip_from_all_service(hostname=host, ip_address_list=list(deleted_ip))
+
+        ubnt_ip = UBNT.get_group_ip_list(group_name=UBNT.firewall_group)
+        if ubnt_ip is not None:
+            log.info("Проверка IP записей в UBNT")
+
+            db_ip_list = [ip.ip_address for ip in DATABASE.get_all_ip_address()]
+            extra_ip = set.difference(set(ubnt_ip), set(db_ip_list))
+            missing_ip = set.difference(set(db_ip_list), set(ubnt_ip))
+
+            if extra_ip:
+                log.info(f"Обнаружены неудаленные из UBNT IP: {', '.join(extra_ip)}")
+                UBNT.delete_ip(ip_address_list=list(extra_ip))
+
+            if missing_ip:
+                log.info(f"Обнаружены недобавленные в UBNT IP: {', '.join(missing_ip)}")
+                UBNT.add_new_ip(ip_address_list=list(missing_ip))
+
         log.info("Проверка успешно выполнена")
-        await async_sleep(hours * 60 * 60)
+        await async_sleep(hours * 60)
