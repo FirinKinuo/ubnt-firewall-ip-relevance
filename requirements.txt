@@ -9,7 +9,7 @@ Exscript==2.6.3
 future==0.18.2
 iniconfig==1.1.1
 llvmlite==0.36.0
-numpy==1.21.1
+numpy==1.22.0
 packaging==21.0
 paramiko==2.10.1
 peewee==3.14.4
